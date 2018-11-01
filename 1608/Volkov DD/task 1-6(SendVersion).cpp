@@ -10,12 +10,14 @@ int main(int argc, char **argv)
 	int rank, num_proc;
 	int  res_proc = 0;
 	srand(time(0));
+	double time;
 	MPI_Init(&argc, &argv);
 	MPI_Comm_size(MPI_COMM_WORLD, &num_proc);
 	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-
+	
 	if (rank == 0) {
 		int VectorSize;
+		
 		int* v = NULL;
 		std::cout << "Please, enter vector size: ";
 		std::cin >> VectorSize;
@@ -26,8 +28,32 @@ int main(int argc, char **argv)
 			std::cout << " " << v[i];
 		}
 		std::cout << std::endl;
+		time = MPI_Wtime();
 		int * proc = new int[num_proc];
-		if (VectorSize%num_proc == 0)
+		int count = VectorSize;
+		
+		for (int i = 0; i < num_proc; i++)
+			proc[i] = 0;
+		
+		while (count != 0)
+		{
+			while (proc[0] != 3 && count != 0)
+			{
+				proc[0]++;
+				count--;
+			}
+			for (int i = 1; (i < num_proc)&& (count != 0); i++)
+				while (proc[i] != 2 && count != 0) {
+					proc[i]++;
+					count--;
+				}
+			for (int i = 0; (i < num_proc) && count != 0; i++)
+			{
+				proc[i]++;
+				count--;
+			}
+		}
+		/*if (VectorSize%num_proc == 0)
 			for (int i = 0; i < num_proc; i++)
 				proc[i] = VectorSize / num_proc;
 		else
@@ -36,7 +62,7 @@ int main(int argc, char **argv)
 				proc[i] = VectorSize / num_proc;
 			for (int i = 0; i < VectorSize%num_proc; i++)
 				proc[i] += 1;
-		}
+		}*/
 		std::cout << "Process number: " << rank << " works ... " << std::endl;
 		for (int i = 0; i < proc[0] - 2; i++)
 		{
@@ -79,7 +105,8 @@ int main(int argc, char **argv)
 		MPI_Reduce(&res_proc, &res, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
 
 	if (rank == 0) {
-		std::cout << "Final result:  " << res << std::endl;
+		
+		printf("Final result: %d\nTime:  %.10lf " ,res, MPI_Wtime()-time);
 	}
 	MPI_Finalize();
 	return 0;
