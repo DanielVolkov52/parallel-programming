@@ -14,10 +14,10 @@ int main(int argc, char **argv)
 	MPI_Init(&argc, &argv);
 	MPI_Comm_size(MPI_COMM_WORLD, &num_proc);
 	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+	int *parts;
 	
 	if (rank == 0) {
 		int VectorSize;
-		
 		int* v = NULL;
 		std::cout << "Please, enter vector size: ";
 		std::cin >> VectorSize;
@@ -29,55 +29,45 @@ int main(int argc, char **argv)
 		}
 		std::cout << std::endl;
 		time = MPI_Wtime();
-		int * proc = new int[num_proc];
+		int *resultVector= new int[VectorSize];
+		int counter=1,tmp=v[0];
+		resultVector[0] = v[0];
+		for (int i = 1; i < VectorSize; i++)
+		{
+			if (tmp != v[i])
+			{
+				resultVector[counter++] = v[i];
+			}
+			tmp = v[i];
+		}
+		std::cout << "resultVector:";
+		for (int i = 0; i < counter; ++i) {
+			v[i] = rand() % 10;
+			std::cout << " " << resultVector[i];
+		}
+		std::cout << std::endl;
+		
 		int count = VectorSize;
 		
-		for (int i = 0; i < num_proc; i++)
-			proc[i] = 0;
-		
-		while (count != 0)
-		{
-			while (proc[0] != 3 && count != 0)
-			{
-				proc[0]++;
-				count--;
-			}
-			for (int i = 1; (i < num_proc)&& (count != 0); i++)
-				while (proc[i] != 2 && count != 0) {
-					proc[i]++;
-					count--;
-				}
-			for (int i = 0; (i < num_proc) && count != 0; i++)
-			{
-				proc[i]++;
-				count--;
-			}
-		}
-		/*if (VectorSize%num_proc == 0)
-			for (int i = 0; i < num_proc; i++)
-				proc[i] = VectorSize / num_proc;
-		else
-		{
-			for (int i = 0; i < num_proc; i++)
-				proc[i] = VectorSize / num_proc;
-			for (int i = 0; i < VectorSize%num_proc; i++)
-				proc[i] += 1;
-		}*/
 		std::cout << "Process number: " << rank << " works ... " << std::endl;
-		for (int i = 0; i < proc[0] - 2; i++)
+		int size = counter / num_proc + (0 < counter % num_proc);
+
+		for (int i = 0; i < size-2; i++)
 		{
-			if ((v[i] > v[i + 1]) != (v[i + 1] > v[i + 2]))
+			if ((resultVector[i] > resultVector[i + 1]) != (resultVector[i + 1] > resultVector[i + 2]))
 			{
 				res_proc += 1;
 			}
 		}
 		for (int i = 1; i < num_proc; i++)
 		{
-			MPI_Send(proc + i, 1, MPI_INT, i, 1, MPI_COMM_WORLD);
+			
+			size = counter / num_proc + (i < counter % num_proc)+2;
+			MPI_Send(&size, 1, MPI_INT, i, 1, MPI_COMM_WORLD);
 			int pos = 0;
 			for (int j = 0; j < i; j++)
-				pos += proc[j];
-			MPI_Send(v + pos - 1, proc[i]+1, MPI_INT, i, 0, MPI_COMM_WORLD);
+				pos += counter / num_proc + (j < counter % num_proc);
+			MPI_Send(resultVector + pos - 2, size, MPI_INT, i, 0, MPI_COMM_WORLD);
 			
 		}
 	}
@@ -85,14 +75,14 @@ int main(int argc, char **argv)
 		int SizeOfParts;
 		MPI_Status status;
 		MPI_Recv(&SizeOfParts, 1, MPI_INT, 0, 1, MPI_COMM_WORLD, &status);
-		int parts[100];
-		MPI_Recv(&parts, SizeOfParts+1, MPI_INT, 0, 0, MPI_COMM_WORLD, &status);
+		parts = new int[SizeOfParts + 2];
+		MPI_Recv(parts, SizeOfParts+1, MPI_INT, 0, 0, MPI_COMM_WORLD, &status);
 		std::cout << "Process number: " << rank << " works ... " << std::endl;
 		std::cout << "Part:";
 		for (int i = 0; i < SizeOfParts+1; i++) 
 			std::cout << " " << parts[i];
 		std::cout << std::endl;
-		for (int i = 0; i < SizeOfParts - 1; i++)
+		for (int i = 0; i < SizeOfParts - 2; i++)
 		{
 			if ((parts[i] > parts[i + 1]) != (parts[i + 1] > parts[i + 2]))
 			{
